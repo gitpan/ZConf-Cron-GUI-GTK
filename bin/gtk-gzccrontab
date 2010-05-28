@@ -184,6 +184,56 @@ sub delSet{
 	return 1;
 }
 
+#
+sub newTab{
+	my $widget=$_[0];
+	my %args= %{$_[1]};
+
+	my ($pressed, $tab)=ask('Name of new Tab...');
+
+	if ((!$args{cron}->writeTab($tab, ''))&&($pressed eq 'accept')) {
+		warn('gzccrontab newSet:1: Could not create the set. ZConf::Cron errored with "'.
+			 $args{cron}->{error}.'"');
+		return undef;
+	}
+
+	#gets the initial sets
+	my @tabs=$args{cron}->getTabs;
+
+	$args{tabList}->set_data_array(\@tabs);
+
+	return 1;
+}
+
+#removes a tab
+sub delTab{
+	my $widget=$_[0];
+	my %args= %{$_[1]};
+
+	my @selected=$args{tabList}->get_selected_indices;
+
+	my $tab=$args{cron}->{tabs}[$selected[0]];
+
+	my ($pressed)=askYN('Remove tab "'.$tab.'"?');
+
+	if ($pressed eq "ok") {
+		if (!$args{cron}->delTab($tab)){
+			warn('gzccrontab delSet:12: Could not delte the tab, "'.$tab.'". ZConf::Cron errored with "'.
+				 $args{cron}->{error}.'"');
+			return undef;
+		}
+	}
+
+	$args{cron}->save;
+
+	#gets the initial sets
+	my @tabs=$args{cron}->getTabs;
+
+	$args{tabList}->set_data_array(\@tabs);
+
+	return 1;
+}
+
 #asks for a string...
 #largely based on 'http://forgeftp.novell.com//gtk2-perl-study/documentation/html/c1701.html#AEN1791'
 sub ask{
@@ -412,6 +462,27 @@ my $tabsReload_button_label=Gtk2::Label->new("Reload Tabs");
 $tabsReload_button_label->show;
 $tabsReload_button->add($tabsReload_button_label);
 $tabsReload_button->show;
+
+#sets up the new tab button
+my $newTab_button = Gtk2::Button->new();
+#sets up the clicked signal and passes $setList, $cron, and $tabList to &newSet
+$newTab_button->signal_connect("clicked" => \&newTab,
+							   {cron=>$cron, setList=>$setList, tabList=>$tabList});
+$buttonHBox->pack_start($newTab_button, 0, 0, 1);
+my $newTab_button_label=Gtk2::Label->new("New Tab");
+$newTab_button_label->show;
+$newTab_button->add($newTab_button_label);
+$newTab_button->show;
+
+#this sets up the delTab button
+my $delTab_button = Gtk2::Button->new();
+$delTab_button->signal_connect("clicked" => \&delTab,
+							   {cron=>$cron, setList=>$setList, tabList=>$tabList});
+$buttonHBox->pack_start($delTab_button, 0, 0, 1);
+my $delTab_button_label=Gtk2::Label->new("Del Tab");
+$delTab_button_label->show;
+$delTab_button->add($delTab_button_label);
+$delTab_button->show;
 
 #sets up the save button
 my $save_button = Gtk2::Button->new();

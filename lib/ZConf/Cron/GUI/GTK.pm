@@ -4,6 +4,8 @@ use warnings;
 use strict;
 use ZConf::Cron;
 use ZConf::GUI;
+use Gtk2::TrayIcon;
+use String::ShellQuote;
 
 =head1 NAME
 
@@ -11,11 +13,11 @@ ZConf::Cron::GUI::GTK - Implements a GTK backend for ZConf::Cron::GUI
 
 =head1 VERSION
 
-Version 0.0.0
+Version 0.1.0
 
 =cut
 
-our $VERSION = '0.0.0';
+our $VERSION = '0.1.0';
 
 =head1 SYNOPSIS
 
@@ -53,7 +55,7 @@ sub new{
 		%args= %{$_[1]};
 	}
 
-	my $self={error=>undef, errorString=>undef};
+	my $self={error=>undef, errorString=>undef, gui=>{}};
 	bless $self;
 
 	#initiates
@@ -82,7 +84,9 @@ sub new{
 
 =head2 crontab
 
-Allows the crontabs to be edited.
+Allows the crontabs to be managed.
+
+This method is blocking.
 
    $zccg->crontab;
    if($zccg->{error}){
@@ -118,6 +122,219 @@ sub crontab{
 
 
 	return 1;
+}
+
+=head2 tray
+
+Creates a tray icon and menu.
+
+    use Gtk2;
+    Gtk2->init;
+    my $guiID=$zccg->tray;
+    $trayicon->show_all;
+    Gtk2->main;
+
+=cut
+
+sub tray{
+	my $self=$_[0];
+
+	#inits the gui hash
+	my %gui;
+	$gui{id}=rand().rand();
+
+	#creates the tray icon
+	$gui{trayicon} = Gtk2::TrayIcon->new("ZConf::Cron");
+	
+	#inits the menu
+	$gui{menubar}=Gtk2::MenuBar->new;
+	$gui{menubarmenu}=Gtk2::ImageMenuItem->new('_Zconf::Cron');
+	$gui{trayiconimage}=$self->xpmGtk2Image;
+	$gui{menubarmenu}->set_image($gui{trayiconimage});
+	$gui{menubar}->show;
+	$gui{menubarmenu}->show;
+	$gui{menu}=Gtk2::Menu->new;
+	$gui{menu}->show;
+	$gui{menuTearoff}=Gtk2::TearoffMenuItem->new;
+	$gui{menuTearoff}->show;
+	$gui{menu}->append($gui{menuTearoff});
+	$gui{menubarmenu}->set_submenu($gui{menu});
+	$gui{menubar}->append($gui{menubarmenu});
+	$gui{trayicon}->add($gui{menubar});
+
+	#refreshes
+	$gui{refresh}=Gtk2::MenuItem->new('_refresh');
+	$gui{refresh}->show;
+	$gui{refresh}->signal_connect(activate=>\&refreshMenuItem,
+								  {
+								   gui=>$gui{id},
+								   self=>$self,
+								   }
+								  );
+	$gui{menu}->append($gui{refresh});
+
+	#display it all
+	$gui{trayicon}->show_all;
+	
+	#save the GUI
+	$self->{gui}{$gui{id}}=\%gui;
+				 
+	#refreshes the GUI
+	$self->refreshMenuItem({gui=>$gui{id}, self=>$self});
+	
+	return $gui{id};
+}
+
+=head2 xpm
+
+This returns a XPM icon for this module.
+
+    my $xpm=$zccg->xpm;
+
+=cut
+
+sub xpm{
+
+return '/* XPM */
+static char * trayicon_xpm[] = {
+"32 32 77 1",
+" 	c #000000",
+".	c #0036FF",
+"+	c #B71717",
+"@	c #0E0202",
+"#	c #520A0A",
+"$	c #851111",
+"%	c #A41515",
+"&	c #B31717",
+"*	c #B41717",
+"=	c #801010",
+"-	c #470909",
+";	c #060101",
+">	c #B61717",
+",	c #010000",
+"\'	c #530A0A",
+")	c #AF1616",
+"!	c #A61515",
+"~	c #400808",
+"{	c #280505",
+"]	c #B11616",
+"^	c #510A0A",
+"/	c #720E0E",
+"(	c #7A0F0F",
+"_	c #3B0707",
+":	c #140303",
+"<	c #050101",
+"[	c #220404",
+"}	c #590B0B",
+"|	c #180303",
+"1	c #A81515",
+"2	c #6A0D0D",
+"3	c #550B0B",
+"4	c #A91515",
+"5	c #2C0606",
+"6	c #090101",
+"7	c #700E0E",
+"8	c #0D0202",
+"9	c #9B1313",
+"0	c #811010",
+"a	c #020000",
+"b	c #110202",
+"c	c #B01616",
+"d	c #2D0606",
+"e	c #5A0B0B",
+"f	c #8B1111",
+"g	c #941313",
+"h	c #7B1010",
+"i	c #760F0F",
+"j	c #5F0C0C",
+"k	c #150303",
+"l	c #460909",
+"m	c #B51717",
+"n	c #310606",
+"o	c #480909",
+"p	c #200404",
+"q	c #AD1616",
+"r	c #620C0C",
+"s	c #120202",
+"t	c #A11414",
+"u	c #790F0F",
+"v	c #881111",
+"w	c #931212",
+"x	c #8D1212",
+"y	c #AA1515",
+"z	c #1B0303",
+"A	c #570B0B",
+"B	c #080101",
+"C	c #6F0E0E",
+"D	c #B31616",
+"E	c #750F0F",
+"F	c #390707",
+"G	c #130202",
+"H	c #560B0B",
+"I	c #A51515",
+"J	c #3E0808",
+"K	c #100202",
+"L	c #861111",
+" ..      ..    ..   ..  ..    . ",
+"  .....  ..     .....   ..    . ",
+"                                ",
+"                                ",
+"                                ",
+"                                ",
+"+++++++++++++++      @#$%&*%=-; ",
+"++++++++++++++>    ,\')++++++++!~",
+"           {]+^   ,/+>(_:<;[}!++",
+"          |1+2    3+45       67+",
+"         89+0a   bc>d          e",
+"        <f+g6    3+h            ",
+"  ..... i.....  .....   ....... ",
+" ..    j+..    ..!+k..  ..    . ",
+" .    l+*..    . m+; .  ..    . ",
+" .   n&+o..    . m+; .  ..    . ",
+" .  pq+r ..    . !+k .  ..    . ",
+" ..st+u, ..    . v+_ .  ..    . ",
+" ..w+x;  ..    ..3+h..  ..    . ",
+" a.....  ..     .....   ..    .}",
+" 2+yz             A+45       BC+",
+"#+D5              ,E+>uFG<;pH%++",
+">++++++++++++++    ,3c++++++++IJ",
+"+++++++++++++++      K\'LI**%=l; ",
+"                                ",
+"                                ",
+"                                ",
+"                                ",
+"                                ",
+"                                ",
+"  .....  .....  .....   ....... ",
+" ..      ..    ..   ..  ..    . "};
+'
+
+}
+
+=head2 xpmGtk2Image
+
+This returns a Gtk2::Image object with it. This is done as getting a Gtk2::Image object from raw data is
+not a straight forward processes. It requires access to "/tmp/" to write the scratch file.
+
+    my $image=$zccg->xpmGtk2Image;
+
+=cut
+
+sub xpmGtk2Image{
+	my $self=$_[0];
+	my $xpm=$self->xpm;
+
+	my $file="/tmp/".rand().rand().rand().rand().".xpm";
+
+	open(XPM, '>', $file);
+	print XPM $xpm;
+	close(XPM);
+
+	my $image=Gtk2::Image->new_from_file($file);
+
+	unlink($file);
+
+	return $image;
 }
 
 =head2 dialogs
@@ -162,6 +379,142 @@ sub errorblank{
 
 	$self->{error}=undef;
 	$self->{errorString}="";
+
+	return 1;
+}
+
+=head1  tray Related Methods.
+
+These methods are entirely related to the tray method.
+
+=head2 refreshMenuItem
+
+This method refresheses the menu.
+
+It takes one arguement and it is a hash reference.
+
+=head3 hash reference keys
+
+=head4 gui
+
+This is the GUI ID of the tray GUI.
+
+=head4 self
+
+This is the ZConf::Cron::GUI::GTK object.
+
+=cut
+
+sub refreshMenuItem{
+	my %args;
+	%args=%{$_[1]};
+
+	#makes sure we have a gui ID
+	if (!defined($args{gui})) {
+		return undef;
+	}
+
+	#make sure we have our self
+	if (!defined($args{self})) {
+		return undef;
+	}
+
+	#gets the gui ID
+	my $guiID=$args{gui};
+
+	#easier to use
+	my $gui=$args{gui};
+	my $self=$args{self};
+
+	#makes sure the GUI exists
+	if (!defined($self->{gui}{$gui})) {
+		return undef;
+	}
+
+	#rebuilds the basic menu items
+	$self->{gui}{$gui}{menu}=Gtk2::Menu->new;
+	$self->{gui}{$gui}{menu}->show;
+	$self->{gui}{$gui}{menuTearoff}=Gtk2::TearoffMenuItem->new;
+	$self->{gui}{$gui}{menuTearoff}->show;
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{menuTearoff});
+
+	#adds the refresh menu item
+	$self->{gui}{$gui}{refresh}=Gtk2::MenuItem->new('_refresh');
+	$self->{gui}{$gui}{refresh}->show;
+	$self->{gui}{$gui}{refresh}->signal_connect(activate=>\&refreshMenuItem,
+												{
+												 gui=>$guiID,
+												 self=>$self,
+												 }
+												);
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{refresh});
+	
+	#adds the edit item
+	$self->{gui}{$gui}{edit}=Gtk2::MenuItem->new('_edit');
+	$self->{gui}{$gui}{edit}->show;
+	$self->{gui}{$gui}{edit}->signal_connect(activate=>sub{
+												 $_[1]{self}->crontab;
+												 &refresh( {
+															gui=>$_[1]{gui},
+															self=>$_[1]{self}
+															}
+														  );
+											 },
+											 {
+												 gui=>$guiID,
+												 self=>$self,
+											 }
+												);
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{edit});
+
+	#adds the seperator item
+	$self->{gui}{$gui}{seperator}=Gtk2::SeparatorMenuItem->new();
+	$self->{gui}{$gui}{seperator}->show;
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{seperator});
+
+	#gets the tabs
+	my @tabs=$self->{zcc}->getTabs;
+
+	#creates the object to hold the cron tabs to run
+	my $int=0;
+	while (defined($tabs[$int])) {
+		my $name='item'.$int;
+
+		#adds the a new item
+		$self->{gui}{$gui}{$name}=Gtk2::MenuItem->new('_'.$tabs[$int]);
+		$self->{gui}{$gui}{$name}->show;
+		$self->{gui}{$gui}{$name}->signal_connect(activate=>sub{
+													  my $safetab=shell_quote($_[1]{tab});
+													  #my $sef=$_[1]{self}->{zcc}->
+													  system('zccron -t '.$safetab);
+												 },
+												 {
+												  gui=>$guiID,
+												  self=>$self,
+												  tab=>$tabs[$int],
+												  }
+												 );
+		$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{$name});		
+		
+		$int++;
+	}
+
+	#adds the seperator item
+	$self->{gui}{$gui}{seperator2}=Gtk2::SeparatorMenuItem->new();
+	$self->{gui}{$gui}{seperator2}->show;
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{seperator2});
+
+	#the quit button
+	$self->{gui}{$gui}{quit}=Gtk2::MenuItem->new('_quit');
+	$self->{gui}{$gui}{quit}->show;
+	$self->{gui}{$gui}{quit}->signal_connect(activate=>sub{
+												 exit 0;
+											 }
+											 );
+	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{quit});	
+
+	#adds the new menu
+	$self->{gui}{$gui}{menubarmenu}->set_submenu($self->{gui}{$gui}{menu});
 
 	return 1;
 }

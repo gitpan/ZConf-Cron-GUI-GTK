@@ -1,5 +1,13 @@
 Revision history for ZConf-Cron-GUI-GTK
 
-0.0.0		2009-10-12/00:10
-			-Initial release.
+0.1.0	2010-05-28/8:30
+		-Note that the crontab method is blocking.
+		-Add tray method and related methods.
+		-Add the XPM related methods.
+		-Fix module requirements.
+		-Update MANIFEST.
+		-Add 'bin/gtk-zccron-tray'.
+
+0.0.0	2009-10-12/00:10
+		-Initial release.
 
