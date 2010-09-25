@@ -1,5 +1,8 @@
 Revision history for ZConf-Cron-GUI-GTK
 
+1.0.0	2010-09-25/08:25
+		-Now uses Gtk2::StatusIcon instead of Gtk2::TrayIcon.
+
 0.1.0	2010-05-28/8:30
 		-Note that the crontab method is blocking.
 		-Add tray method and related methods.

@@ -4,7 +4,6 @@ use warnings;
 use strict;
 use ZConf::Cron;
 use ZConf::GUI;
-use Gtk2::TrayIcon;
 use String::ShellQuote;
 
 =head1 NAME
@@ -13,11 +12,11 @@ ZConf::Cron::GUI::GTK - Implements a GTK backend for ZConf::Cron::GUI
 
 =head1 VERSION
 
-Version 0.1.0
+Version 1.0.0
 
 =cut
 
-our $VERSION = '0.1.0';
+our $VERSION = '1.0.0';
 
 =head1 SYNOPSIS
 
@@ -143,24 +142,23 @@ sub tray{
 	my %gui;
 	$gui{id}=rand().rand();
 
-	#creates the tray icon
-	$gui{trayicon} = Gtk2::TrayIcon->new("ZConf::Cron");
-	
 	#inits the menu
-	$gui{menubar}=Gtk2::MenuBar->new;
-	$gui{menubarmenu}=Gtk2::ImageMenuItem->new('_Zconf::Cron');
 	$gui{trayiconimage}=$self->xpmGtk2Image;
-	$gui{menubarmenu}->set_image($gui{trayiconimage});
-	$gui{menubar}->show;
-	$gui{menubarmenu}->show;
+	$gui{trayiconimagepixbuf}=$gui{trayiconimage}->get_pixbuf;
+	$gui{statusicon}=Gtk2::StatusIcon->new_from_pixbuf($gui{trayiconimagepixbuf});
+
 	$gui{menu}=Gtk2::Menu->new;
+	$gui{menu}->set_border_width('0');
 	$gui{menu}->show;
-	$gui{menuTearoff}=Gtk2::TearoffMenuItem->new;
-	$gui{menuTearoff}->show;
-	$gui{menu}->append($gui{menuTearoff});
-	$gui{menubarmenu}->set_submenu($gui{menu});
-	$gui{menubar}->append($gui{menubarmenu});
-	$gui{trayicon}->add($gui{menubar});
+
+	#connects the menu stuff
+	$gui{statusicon}->signal_connect(
+									 'activate'=>\&popup,
+									 {
+									  gui=>$gui{id},
+									  self=>$self,
+									  }
+									 );
 
 	#refreshes
 	$gui{refresh}=Gtk2::MenuItem->new('_refresh');
@@ -173,9 +171,6 @@ sub tray{
 								  );
 	$gui{menu}->append($gui{refresh});
 
-	#display it all
-	$gui{trayicon}->show_all;
-	
 	#save the GUI
 	$self->{gui}{$gui{id}}=\%gui;
 				 
@@ -454,17 +449,14 @@ sub refreshMenuItem{
 	$self->{gui}{$gui}{edit}->show;
 	$self->{gui}{$gui}{edit}->signal_connect(activate=>sub{
 												 $_[1]{self}->crontab;
-												 &refresh( {
-															gui=>$_[1]{gui},
-															self=>$_[1]{self}
-															}
-														  );
+												 $_[1]{self}->refreshMenuItem( {
+																	gui=>$_[1]{gui},
+																	self=>$_[1]{self}
+																	}
+																  );
 											 },
-											 {
-												 gui=>$guiID,
-												 self=>$self,
-											 }
-												);
+											 \%args
+											 );
 	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{edit});
 
 	#adds the seperator item
@@ -514,9 +506,27 @@ sub refreshMenuItem{
 	$self->{gui}{$gui}{menu}->append($self->{gui}{$gui}{quit});	
 
 	#adds the new menu
-	$self->{gui}{$gui}{menubarmenu}->set_submenu($self->{gui}{$gui}{menu});
 
 	return 1;
+}
+
+=head2 popup
+
+This pops the menu up.
+
+=cut
+
+sub popup{
+	my $widget=$_[0];
+	my %args=%{ $_[1] };
+	my $menu=$args{self}->{gui}{ $args{gui} }{menu};
+
+	my ($x, $y, $push_in) = Gtk2::StatusIcon::position_menu($menu, $widget);
+	
+	$menu->show_all();
+	$menu->popup( undef, undef,
+				  sub{return ($x,$y,0)} ,
+				  undef, 0, 0 );
 }
 
 =head1 DIALOGS

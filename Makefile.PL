@@ -14,7 +14,7 @@ WriteMakefile(
 			  INST_SCRIPT => 'bin',
 			  PREREQ_PM => {
 							'Test::More' => 0,
-							'Gtk2::TrayIcon'=>0,
+							'Gtk2'=>0,
 							'ZConf::Cron'=>0,
 							'ZConf'=>0,
 							'ZConf::GUI'=>0,
